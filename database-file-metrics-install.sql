@@ -71,7 +71,7 @@ IF OBJECT_ID('dbo.loadDatabaseFileMetrics') IS NULL
 GO
 
 ALTER PROCEDURE [dbo].[loadDatabaseFileMetrics]
-	@DBName sysname --Name of the Database you want to collect Database File Metrics for.
+	@DBName NVARCHAR(128) --Name of the Database you want to collect Database File Metrics for.
 AS 
 
 /**************************************************************************
@@ -123,12 +123,12 @@ BEGIN
 	) ON [PRIMARY]
 
 
-	SET @sql = '
+	SET @sql = N'
 	USE '+ @DBName +' 
 	' + @crlf
 
 	--Load the Index Metrics into our Temp table
-	SET @sql = @sql +  'INSERT INTO #DBFileInfo ([DatabaseID],[DatabaseName],[FileID],[FileName],[FileType],[FileLocation],[CurrentState],[isReadOnly],[CurrentSizeMB],[SpaceUsedMB],[PercentUsed],[FreeSpaceMB],[PercentFree],[AutoGrowth])
+	SET @sql = @sql +  N'INSERT INTO #DBFileInfo ([DatabaseID],[DatabaseName],[FileID],[FileName],[FileType],[FileLocation],[CurrentState],[isReadOnly],[CurrentSizeMB],[SpaceUsedMB],[PercentUsed],[FreeSpaceMB],[PercentFree],[AutoGrowth])
 	SELECT [DatabaseID] = DB_ID()
 		,[DatabaseName] = DB_NAME()
 		,[FileID] = f.file_id
@@ -193,6 +193,76 @@ BEGIN
 END
 GO
 
+
+--If our procedure doesn't already exist, create one with a dummy query to be overwritten.
+IF OBJECT_ID('dbo.loadAllDBFileMetrics') IS NULL
+  EXEC sp_executesql N'CREATE PROCEDURE dbo.loadAllDBFileMetrics AS	SELECT 1;';
+GO
+
+ALTER PROCEDURE [dbo].[loadAllDBFileMetrics]
+AS
+
+/**************************************************************************
+	Author: Eric Cobb - http://www.sqlnuggets.com/
+		License:
+			MIT License
+			Copyright (c) 2017 Eric Cobb
+			View full license disclosure: https://github.com/ericcobb/SQL-Server-Metrics-Pack/blob/master/LICENSE
+			
+	Purpose: 
+			This stored procedure is used to collect Database File Metrics for all databases on the server,
+		    this data is persisted in the dbo.DatabaseFileMetrics table. 
+
+	Parameters:
+			NONE
+
+	Usage:	
+			--Collect Database File Metrics for all databases
+			EXEC [dbo].[loadAllDBFileMetrics];
+
+***************************************************************************/
+
+BEGIN
+	SET NOCOUNT ON;
+
+	DECLARE @tmpDatabases TABLE (
+				ID INT IDENTITY PRIMARY KEY
+				,DatabaseName NVARCHAR(128)
+				,Completed BIT
+			);
+
+	DECLARE @CurrentID INT;
+	DECLARE @CurrentDatabaseName NVARCHAR(128);
+
+	INSERT INTO @tmpDatabases (DatabaseName, Completed)
+	SELECT [Name], 0
+	FROM sys.databases
+	WHERE state = 0
+	AND source_database_id IS NULL
+	ORDER BY [Name] ASC
+
+
+	WHILE EXISTS (SELECT * FROM @tmpDatabases WHERE Completed = 0)
+	BEGIN
+		SELECT TOP 1 @CurrentID = ID,
+					 @CurrentDatabaseName = DatabaseName
+		FROM @tmpDatabases
+		WHERE Completed = 0
+		ORDER BY ID ASC
+
+		EXEC [dbo].[loadDatabaseFileMetrics] @DBName = @CurrentDatabaseName
+
+		-- Update that the database is completed
+		UPDATE @tmpDatabases
+		SET Completed = 1
+		WHERE ID = @CurrentID
+
+		-- Clear variables
+		SET @CurrentID = NULL
+		SET @CurrentDatabaseName = NULL
+	END
+END
+GO
 
 /**************************************************************************
 	Create View(s)
