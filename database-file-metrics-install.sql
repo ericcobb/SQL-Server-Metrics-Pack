@@ -127,29 +127,30 @@ BEGIN
 	USE '+ @DBName +' 
 	' + @crlf
 
-	--Load the Index Metrics into our Temp table
+	--Load the Database File Metrics into our Temp table
 	SET @sql = @sql +  N'INSERT INTO #DBFileInfo ([DatabaseID],[DatabaseName],[FileID],[FileName],[FileType],[FileLocation],[CurrentState],[isReadOnly],[CurrentSizeMB],[SpaceUsedMB],[PercentUsed],[FreeSpaceMB],[PercentFree],[AutoGrowth])
-	SELECT [DatabaseID] = DB_ID()
+	SELECT [DatabaseID] = f.database_id
 		,[DatabaseName] = DB_NAME()
-		,[FileID] = f.file_id
-		,[FileName] = f.name
-		,[FileType] = f.type_desc
+		,[FileID] = d.file_id
+		,[FileName] = d.name
+		,[FileType] = d.type_desc
 		,[FileLocation] = f.physical_name
-		,[CurrentState] = f.state_desc
-		,[isReadOnly] = f.is_read_only
-		,[CurrentSizeMB] = CONVERT(DECIMAL(10,2),f.SIZE/128.0)
-		,[SpaceUsedMB] = CONVERT(DECIMAL(10,2),CAST(FILEPROPERTY(f.name, ''SPACEUSED'') AS INT)/128.0)
-		,[PercentUsed] = CAST((CAST(FILEPROPERTY(f.name, ''SPACEUSED'')/128.0 AS DECIMAL(10,2))/CAST(f.SIZE/128.0 AS DECIMAL(10,2)))*100 AS DECIMAL(10,2))
-		,[FreeSpaceMB] = CONVERT(DECIMAL(10,2),f.SIZE/128.0 - CAST(FILEPROPERTY(f.name, ''SPACEUSED'') AS INT)/128.0)
-		,[PercentFree] = CONVERT(DECIMAL(10,2),((f.SIZE/128.0 - CAST(FILEPROPERTY(f.name, ''SPACEUSED'') AS INT)/128.0)/(f.SIZE/128.0))*100)
-		,[AutoGrowth] = ''By '' + CASE is_percent_growth 
-								WHEN 0 THEN CAST(f.GROWTH/128 AS VARCHAR(10)) + '' MB -'' 
-								WHEN 1 THEN CAST(f.GROWTH AS VARCHAR(10)) + ''% -'' ELSE '''' END 
-							+ CASE max_size 
+		,[CurrentState] = d.state_desc
+		,[isReadOnly] = d.is_read_only
+		,[CurrentSizeMB] = CONVERT(DECIMAL(10,2),d.SIZE/128.0)
+		,[SpaceUsedMB] = CONVERT(DECIMAL(10,2),CAST(FILEPROPERTY(d.name, ''SPACEUSED'') AS INT)/128.0)
+		,[PercentUsed] = CAST((CAST(FILEPROPERTY(d.name, ''SPACEUSED'')/128.0 AS DECIMAL(10,2))/CAST(d.SIZE/128.0 AS DECIMAL(10,2)))*100 AS DECIMAL(10,2))
+		,[FreeSpaceMB] = CONVERT(DECIMAL(10,2),d.SIZE/128.0 - CAST(FILEPROPERTY(d.name, ''SPACEUSED'') AS INT)/128.0)
+		,[PercentFree] = CONVERT(DECIMAL(10,2),((d.SIZE/128.0 - CAST(FILEPROPERTY(d.name, ''SPACEUSED'') AS INT)/128.0)/(d.SIZE/128.0))*100)
+		,[AutoGrowth] = ''By '' + CASE d.is_percent_growth 
+								WHEN 0 THEN CAST(d.GROWTH/128 AS VARCHAR(10)) + '' MB -''
+								WHEN 1 THEN CAST(d.GROWTH AS VARCHAR(10)) + ''% -'' ELSE '''' END 
+							+ CASE d.max_size 
 								WHEN 0 THEN ''DISABLED'' 
 								WHEN -1 THEN '' Unrestricted'' 
-								ELSE '' Restricted to '' + CAST(max_size/(128*1024) AS VARCHAR(10)) + '' GB'' END  
-	FROM sys.master_files f --use sys.master_files instead of sys.database_files, because if the database is hosted by an AlwaysOn readable secondary replica, sys.database_files.physical_name indicates the file location of the primary replica database instead.
+								ELSE '' Restricted to '' + CAST(d.max_size/(128*1024) AS VARCHAR(10)) + '' GB'' END  
+	FROM sys.database_files d 
+	INNER JOIN sys.master_files f ON f.file_id = d.file_id  --join to sys.master_files to get physical_name because if the database is hosted by an AlwaysOn readable secondary replica, sys.database_files.physical_name indicates the file location of the primary replica database instead.
 	WHERE f.database_id = DB_ID()
 	OPTION (MAXDOP 2);'
 
