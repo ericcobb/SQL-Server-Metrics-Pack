@@ -433,41 +433,41 @@ AS
 	***************************************************************************/
 
 	SELECT [DatabaseName]
-			,[SchemaName]
-			,[TableName]
-			,[IndexName]
-			,[IndexType]
-			,[Rows]
-			,[IndexSizeMB]
-			,[UserSeeks]
-			,[UserScans]
-			,[UserLookups]
-			,[UserUpdates]
-			,[IndexMetricsChecks]
-			,[SQLServerStartTime]
-			,[totalUserSeek]
-			,[totalUserScans]
-			,[totalUserLookups]
-			,[totalUserUpdates]
-			,[TotalIndexMetricsChecks]
-			,[DateInitiallyChecked]
-			,[DateLastChecked]
-			,[isDisabled]
-			,[isHypothetical]
+		,[SchemaName]
+		,[TableName]
+		,[IndexName]
+		,[IndexType]
+		,[Rows]
+		,[IndexSizeMB]
+		,[UserSeeks]
+		,[UserScans]
+		,[UserLookups]
+		,[UserUpdates]
+		,[IndexMetricsChecks]
+		,[SQLServerStartTime]
+		,[totalUserSeek]
+		,[totalUserScans]
+		,[totalUserLookups]
+		,[totalUserUpdates]
+		,[TotalIndexMetricsChecks]
+		,[DateInitiallyChecked]
+		,[DateLastChecked]
+		,[isDisabled]
+		,[isHypothetical]			
+		,[DropStatement]
 	FROM (SELECT ixm.[DatabaseName],ixm.[SchemaName],ixm.[TableName],ixm.[IndexName],[IndexType],[Rows],ixm.[IndexSizeMB],ixm.[UserSeeks],ixm.[UserScans],
-				ixm.[UserLookups],ixm.[UserUpdates],ixm.[IndexMetricsChecks],ixm.[SQLServerStartTime],t.[totalUserSeek],t.[totalUserScans],t.[totalUserLookups],t.[totalUserUpdates],
-				[TotalIndexMetricsChecks] = t.[totalCount],	t.[DateInitiallyChecked], t.[DateLastChecked], ixm.[isDisabled], ixm.[isHypothetical],
-				ROW_NUMBER() OVER (PARTITION BY ixm.[Hash] ORDER BY ixm.SQLServerStartTime DESC) AS rn
-			FROM [dbo].[IndexMetrics] ixm
-			INNER JOIN (SELECT [Hash], [totaluserseek] = SUM(UserSeeks), [totalUserScans] = SUM(UserScans), [totalUserLookups] = SUM(UserLookups), 
-							[totalUserUpdates] = SUM(UserUpdates), [totalcount] = SUM([IndexMetricsChecks]),[DateInitiallyChecked] = MIN([DateInitiallyChecked]),
-							[DateLastChecked] = MAX([DateLastChecked])
-						FROM [dbo].[IndexMetrics]
-						GROUP BY [Hash]
-						) t ON t.[Hash] = ixm.[Hash]
-		) ix
+			ixm.[UserLookups],ixm.[UserUpdates],ixm.[IndexMetricsChecks],ixm.[SQLServerStartTime],t.[totalUserSeek],t.[totalUserScans],t.[totalUserLookups],t.[totalUserUpdates],
+			[TotalIndexMetricsChecks] = t.[totalCount],	t.[DateInitiallyChecked], t.[DateLastChecked], ixm.[isDisabled], ixm.[isHypothetical], ixm.[DropStatement],
+			ROW_NUMBER() OVER (PARTITION BY ixm.[Hash] ORDER BY ixm.SQLServerStartTime DESC) AS rn
+		FROM [dbo].[IndexMetrics] ixm
+		INNER JOIN (SELECT [Hash], [totaluserseek] = SUM(UserSeeks), [totalUserScans] = SUM(UserScans), [totalUserLookups] = SUM(UserLookups), 
+					[totalUserUpdates] = SUM(UserUpdates), [totalcount] = SUM([IndexMetricsChecks]),[DateInitiallyChecked] = MIN([DateInitiallyChecked]),
+					[DateLastChecked] = MAX([DateLastChecked])
+				FROM [dbo].[IndexMetrics]
+				GROUP BY [Hash]
+				) t ON t.[Hash] = ixm.[Hash]
+	) ix
 	WHERE ix.rn = 1
-
 GO
 
 --If our view doesn't already exist, create one with a dummy query to be overwritten.
