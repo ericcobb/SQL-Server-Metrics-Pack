@@ -15,6 +15,8 @@ Simply run the *index-metrics-install.sql* file, specifying which database you w
 - See how much or how little an index is being used
 - See if an index's usage has increased or decreased over time
 - Identify unused and rarely used indexes
+- Generate "CREATE" and "DROP" scripts for all of the indexes in a database
+- View a history of changes to index definitions
 
 ### Benefits:
 - Database Administrators can give Developers permissions to read the Index Metrics Views without having to grant the elevated access sometimes required to run SQL Server's DMOs.  This allows Developers to gain deep insight into index usage in Production systems that they may not have access to otherwise.
