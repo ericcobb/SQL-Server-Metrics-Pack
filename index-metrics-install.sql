@@ -880,7 +880,7 @@ FROM (SELECT DISTINCT [DatabaseName]
 			  ,[DropStatement]
 			  ,[DateLastChecked]
 			  ,ROW_NUMBER() OVER(PARTITION BY [DatabaseName],[SchemaName],[TableName],[IndexName],[IndexType] ORDER BY DateLastChecked DESC) AS RowNumber
-		  FROM [master].[dbo].[vwIndexMetrics_CurrentActiveIndexMetrics]
+		  FROM [dbo].[vwIndexMetrics_CurrentActiveIndexMetrics]
 		  WHERE CreateStatement IS NOT NULL
 		  AND DateLastChecked > getdate()-5
 		  ) q
