@@ -124,7 +124,7 @@ BEGIN
 
 
 	SET @sql = N'
-	USE '+ @DBName +' 
+	USE ['+ @DBName +'] 
 	' + @crlf
 
 	--Load the Database File Metrics into our Temp table
